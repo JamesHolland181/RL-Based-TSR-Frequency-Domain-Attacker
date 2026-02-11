@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+
+# Model weights and checkpoints
+*.pth
+*.h5
+*.ckpt
+*.pkl
+*.weights
+
+# Datasets and large data files
+*.tensor
+adversarial_dataset/train/
+adversarial_dataset/test/
+data/
+path_to_dataset/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
