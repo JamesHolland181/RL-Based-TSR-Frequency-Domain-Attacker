@@ -34,19 +34,18 @@ env/
 # VS Code
 .vscode/
 
-# Model weights and checkpoints
-*.pth
+# Model weights and checkpoints (now tracked with Git LFS)
+# *.pth - tracked by LFS
+# *.tensor - tracked by LFS
 *.h5
 *.ckpt
 *.pkl
 *.weights
 
-# Datasets and large data files
-*.tensor
-adversarial_dataset/train/
-adversarial_dataset/test/
-data/
-path_to_dataset/
+# Datasets and large data files (now tracked with Git LFS)
+# adversarial_dataset/ - tracked by LFS
+# data/ - tracked by LFS
+# path_to_dataset/ - tracked by LFS
 
 # OS
 .DS_Store
