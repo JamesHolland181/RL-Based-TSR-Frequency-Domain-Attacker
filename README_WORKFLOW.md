@@ -173,19 +173,67 @@ All pre-installed in `.venv`:
 
 ## 🎯 For Collaborators: Adding New Features
 
+### Quick Start for Contributors
+
+1. **Fork and clone** the repository
+2. **Set up development environment** - see [CONTRIBUTING.md](CONTRIBUTING.md)
+3. **Create a feature branch**: `git checkout -b feature/amazing-feature`
+4. **Make your changes** following our [style guide](CONTRIBUTING.md#style-guidelines)
+5. **Test thoroughly**: `python test_workflow.py && python test_models.py`
+6. **Submit a pull request** with clear description
+
+For detailed contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ### Adding New Adversarial Patch Types
 
 Edit `TSR_Models/generate_adv_dataset.py`:
 
 ```python
 def apply_adversarial_patch(image, patch_type='occlusion', size=20):
+    """
+    Applies an adversarial modification to the image.
+    
+    Args:
+        image: Torch tensor image (C, H, W)
+        patch_type: Type of adversarial attack
+        size: Size of the patch in pixels
+    
+    Returns:
+        Modified image tensor
+    """
     # ... existing code ...
     
     elif patch_type == 'your_new_attack':
         # Your implementation here
-        image_modified = your_attack_function(image)
-    
+        # Example: Weather effects (fog, rain, etc.)
+        image_modified = your_attack_function(image, size)
+        
+    # Always return properly formatted tensor
     return torch.tensor(image_modified.transpose((2, 0, 1)))
+```
+
+**Testing your new attack:**
+
+```python
+if __name__ == "__main__":
+    from lisa import LISA
+    import matplotlib.pyplot as plt
+    
+    # Load sample
+    dataset = LISA(root='./data', train=True, download=True)
+    image, label = dataset[0]
+    
+    # Test your attack
+    attacked = apply_adversarial_patch(image, 'your_new_attack', size=20)
+    
+    # Visualize
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    axes[0].imshow(image.permute(1, 2, 0))
+    axes[0].set_title('Original')
+    axes[1].imshow(attacked.permute(1, 2, 0))
+    axes[1].set_title('Your Attack')
+    plt.savefig('attack_comparison.png')
+    print("✓ Visualization saved to attack_comparison.png")
 ```
 
 Then update the patch_types list when generating:
@@ -193,40 +241,167 @@ Then update the patch_types list when generating:
 ```python
 generate_adversarial_dataset(
     dataset,
-    patch_types=['occlusion', 'light', 'your_new_attack']
+    num_samples=100,
+    patch_types=['occlusion', 'light', 'perturbation', 'your_new_attack'],
+    size=20
 )
 ```
 
 ### Adding New Model Architectures
 
-1. Create `TSR_Models/your_model.py` with your architecture
-2. Add loader function to `TSR_Models/models_factory.py`:
+**Step 1:** Create your model file `TSR_Models/your_model.py`:
 
 ```python
-def load_your_model(num_classes, device):
+"""
+Your Model Architecture for Traffic Sign Recognition.
+
+This module implements [brief description of your model].
+"""
+import torch
+import torch.nn as nn
+
+class YourModelClass(nn.Module):
+    """
+    Your custom TSR model.
+    
+    Args:
+        num_classes (int): Number of traffic sign classes. Default: 47 (LISA).
+        input_size (int): Expected input image size. Default: 224.
+        dropout (float): Dropout rate for regularization. Default: 0.5.
+    
+    Attributes:
+        features: Feature extraction layers
+        classifier: Classification head
+    
+    Example:
+        >>> model = YourModelClass(num_classes=47)
+        >>> input_tensor = torch.randn(1, 3, 224, 224)
+        >>> output = model(input_tensor)
+        >>> output.shape
+        torch.Size([1, 47])
+    """
+    def __init__(self, num_classes=47, input_size=224, dropout=0.5):
+        super(YourModelClass, self).__init__()
+        
+        # Define your architecture
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),
+            # ... add more layers
+        )
+        
+        self.classifier = nn.Sequential(
+            nn.Linear(64 * 56 * 56, 512),
+            nn.ReLU(inplace=True),
+            nn.Dropout(dropout),
+            nn.Linear(512, num_classes)
+        )
+    
+    def forward(self, x):
+        """Forward pass through the network."""
+        x = self.features(x)
+        x = x.view(x.size(0), -1)
+        x = self.classifier(x)
+        return x
+```
+
+**Step 2:** Add loader to `TSR_Models/models_factory.py`:
+
+```python
+def load_your_model(num_classes, device, pretrained_path=None):
+    """
+    Load your custom model with optional pre-trained weights.
+    
+    Args:
+        num_classes (int): Number of output classes
+        device: torch.device for model placement
+        pretrained_path (str, optional): Path to pre-trained weights
+    
+    Returns:
+        torch.nn.Module: Loaded model on specified device
+    """
     from your_model import YourModelClass
+    
     model = YourModelClass(num_classes=num_classes)
-    # Load pre-trained weights if available
-    model.load_state_dict(torch.load('../Model_Weights/your_model.pth'))
+    
+    if pretrained_path and os.path.exists(pretrained_path):
+        state_dict = torch.load(pretrained_path, map_location=device)
+        model.load_state_dict(state_dict)
+        print(f"✓ Loaded pre-trained weights from {pretrained_path}")
+    else:
+        print("⚠ No pre-trained weights loaded, using random initialization")
+    
     return model.to(device)
 ```
 
-3. Update benchmark/training scripts to include your model
+**Step 3:** Update benchmark script to include your model:
+
+```python
+# In benchmark_and_eval.py or test_models.py
+from models_factory import load_your_model
+
+# Add to model list
+models = {
+    'YourModel': load_your_model(num_classes=47, device=device)
+}
+```
+
+**Step 4:** Document your model in README.md
 
 ### Modifying Training Parameters
 
 Edit `TSR_Models/train_and_eval.py`:
 
 ```python
-# Learning rate
-optimizer = optim.Adam(model.parameters(), lr=1e-4)  # Adjust here
+# ============= Training Configuration =============
+# Adjust these parameters based on your needs
 
-# Early stopping
-TARGET_ACCURACY = 0.85  # Change target accuracy
-MAX_EPOCHS = 50         # Change max epochs
+# Learning rate (typical range: 1e-5 to 1e-3)
+LEARNING_RATE = 1e-4
 
-# Batch size
-train_loader = DataLoader(train_set, batch_size=32)  # Adjust batch size
+# Early stopping criteria
+TARGET_ACCURACY = 0.85  # Stop when validation accuracy reaches this
+MAX_EPOCHS = 50         # Maximum training epochs
+
+# Batch size (adjust based on available memory)
+BATCH_SIZE = 32  # Reduce if out of memory, increase for faster training
+
+# Optimizer and scheduler
+optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+    optimizer, mode='max', factor=0.5, patience=5
+)
+
+# Data loaders
+train_loader = DataLoader(
+    train_set, 
+    batch_size=BATCH_SIZE,
+    shuffle=True,
+    num_workers=4  # Adjust based on CPU cores
+)
+```
+
+**Advanced training configurations:**
+
+```python
+# Using different optimizers
+from torch.optim import SGD, AdamW
+
+# SGD with momentum
+optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
+
+# AdamW (Adam with weight decay)
+optimizer = AdamW(model.parameters(), lr=1e-4, weight_decay=0.01)
+
+# Learning rate schedulers
+from torch.optim.lr_scheduler import CosineAnnealingLR, StepLR
+
+# Cosine annealing
+scheduler = CosineAnnealingLR(optimizer, T_max=50)
+
+# Step decay
+scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
 ```
 
 ## 🐛 Troubleshooting
